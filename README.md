@@ -1,4 +1,4 @@
-# Predicting Ratings of Restarurants from Consumer Preferences
+# Predicting Ratings of Restaurants from Consumer Preferences
 
 ## code
 ### ```processing.py``` houses the data-processing steps required to transform CSVs into a ML dataset
