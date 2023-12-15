@@ -3,7 +3,7 @@
 ## code
 ### ```processing.py``` houses the data-processing steps required to transform CSVs into a ML dataset
 
-### ```analysis.py``` houses the ML models used in the analaysis, including 
+### ```analysis.py``` houses the ML models used in the analysis, including 
 * Linear and Ridge Regression
 * Regression Trees and Forests
 * One versus Rest (OvR)
