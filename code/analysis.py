@@ -167,7 +167,10 @@ def update_thresholds(y_hat, thresholds=[]):
     return y_hat
 
 
-def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None, y_test=None, y_test_pred=None, outcome_name="rating", conf_train=False, conf_val=False, conf_test=False):
+def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None,
+                y_test=None, y_test_pred=None, outcome_name="rating",
+                conf_train=False, conf_val=False, conf_test=False,
+                model_type="Linear Regression"):
 
     if y_train is not None and y_train_pred is not None:
 
@@ -176,7 +179,7 @@ def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None, y_
             cm_train = confusion_matrix(y_train_pred, y_train[outcome_name])
 
             plot_confusion_matrix(cm_train, [0, 1, 2],
-                                  f'Training {outcome_name} Predictions', normalize=False)
+                                  f'{model_type} (Training) Predictions', normalize=False)
 
         train_accuracy = accuracy_score(y_train[outcome_name], y_train_pred)
         train_precision = precision_score(
@@ -198,7 +201,7 @@ def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None, y_
 
             cm_val = confusion_matrix(y_val_pred, y_val[outcome_name])
             plot_confusion_matrix(cm_val, [0, 1, 2],
-                                  f'Validation {outcome_name} Predictions', normalize=False)
+                                  f'{model_type} (Validation) Predictions', normalize=False)
 
         val_accuracy = accuracy_score(y_val[outcome_name], y_val_pred)
         val_precision = precision_score(
@@ -219,7 +222,7 @@ def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None, y_
 
             cm_val = confusion_matrix(y_test_pred, y_test[outcome_name])
             plot_confusion_matrix(cm_val, [0, 1, 2],
-                                  f'Testing {outcome_name} Predictions', normalize=False)
+                                  f'{model_type} (Testing) Predictions', normalize=False)
 
         test_accuracy = accuracy_score(y_test[outcome_name], y_test_pred)
         test_precision = precision_score(
@@ -236,7 +239,10 @@ def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None, y_
         print(f"Testing F1 Score: {test_f1score}")
 
 
-def train_decision_tree_regressor(x_train, y_train, x_val=None, y_val=None, outcome_name='rating', conf_train=False, conf_val=False):
+def train_decision_tree_regressor(x_train, y_train, x_val=None, y_val=None,
+                                  outcome_name='rating', conf_train=False,
+                                  conf_val=False, conf_test=False,
+                                  model_type="Linear Regression"):
 
     tree_reg = DecisionTreeRegressor(random_state=42)
 
@@ -263,14 +269,18 @@ def train_decision_tree_regressor(x_train, y_train, x_val=None, y_val=None, outc
     y_train_pred = update_thresholds(y_train_pred, thresholds)
 
     y_val_pred = update_thresholds(y_val_pred, thresholds)
-
-    get_metrics(y_train, y_train_pred, y_val, y_val_pred,
-                outcome_name, conf_train=conf_train, conf_val=conf_val)
+    get_metrics(y_train=y_train, y_train_pred=y_train_pred,
+                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name,
+                conf_train=conf_train, conf_val=conf_val,
+                conf_test=conf_test, model_type=model_type)
 
     return model, thresholds
 
 
-def train_random_forest_regressor(x_train, y_train, x_val=None, y_val=None, outcome_name='rating', conf_train=False, conf_val=False):
+def train_random_forest_regressor(x_train, y_train, x_val=None, y_val=None,
+                                  outcome_name='rating', conf_train=False,
+                                  conf_val=False, conf_test=False,
+                                  model_type="Linear Regression"):
 
     param_grid = {
         'n_estimators': [i for i in range(50, 550, 50)],
@@ -297,14 +307,18 @@ def train_random_forest_regressor(x_train, y_train, x_val=None, y_val=None, outc
 
     y_train_pred = update_thresholds(y_train_pred, thresholds)
     y_val_pred = update_thresholds(y_val_pred, thresholds)
-
-    get_metrics(y_train, y_train_pred, y_val, y_val_pred,
-                outcome_name, conf_train=conf_train, conf_val=conf_val)
+    get_metrics(y_train=y_train, y_train_pred=y_train_pred,
+                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name,
+                conf_train=conf_train, conf_val=conf_val,
+                conf_test=conf_test, model_type=model_type)
 
     return model, thresholds
 
 
-def train_one_versus_rest(x_train, y_train, x_val=None, y_val=None, outcome_name='rating', conf_train=False, conf_val=False):
+def train_one_versus_rest(x_train, y_train, x_val=None, y_val=None,
+                          outcome_name='rating', conf_train=False,
+                          conf_val=False, conf_test=False,
+                          model_type="Linear Regression"):
 
     param_grid = {
         'estimator__n_estimators': [i for i in range(50, 550, 50)],
@@ -326,14 +340,18 @@ def train_one_versus_rest(x_train, y_train, x_val=None, y_val=None, outcome_name
 
     y_train_pred = model.predict(x_train)
     y_val_pred = model.predict(x_val)
-
-    get_metrics(y_train, y_train_pred, y_val, y_val_pred,
-                outcome_name=outcome_name, conf_train=conf_train, conf_val=conf_val)
+    get_metrics(y_train=y_train, y_train_pred=y_train_pred,
+                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name,
+                conf_train=conf_train, conf_val=conf_val,
+                conf_test=conf_test, model_type=model_type)
 
     return model
 
 
-def train_fixed_effects(x_train, y_train, x_val, y_val, outcome_name="rating", conf_train=False, conf_val=False):
+def train_fixed_effects(x_train, y_train, x_val=None, y_val=None,
+                        outcome_name='rating', conf_train=False,
+                        conf_val=False, conf_test=False,
+                        model_type="Linear Regression"):
 
     # estimates obtained via Stata reghdfe
     ests = {
@@ -449,14 +467,18 @@ def train_fixed_effects(x_train, y_train, x_val, y_val, outcome_name="rating", c
 
     y_train_pred = update_thresholds(y_train_pred, thresholds)
     y_val_pred = update_thresholds(y_val_pred, thresholds)
-
-    get_metrics(y_train, y_train_pred, y_val, y_val_pred,
-                outcome_name, conf_train=conf_train, conf_val=conf_val)
+    get_metrics(y_train=y_train, y_train_pred=y_train_pred,
+                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name,
+                conf_train=conf_train, conf_val=conf_val,
+                conf_test=conf_test, model_type=model_type)
 
     return ests[outcome_name], thresholds
 
 
-def train_gradient_boosting_regressor(x_train, y_train, x_val=None, y_val=None, outcome_name='rating', conf_train=False, conf_val=False):
+def train_gradient_boosting_regressor(x_train, y_train, x_val=None, y_val=None,
+                                      outcome_name='rating', conf_train=False,
+                                      conf_val=False, conf_test=False,
+                                      model_type="Linear Regression"):
 
     booster = GradientBoostingRegressor()
 
@@ -483,14 +505,18 @@ def train_gradient_boosting_regressor(x_train, y_train, x_val=None, y_val=None, 
     thresholds = [0.75, 1.5]
     y_train_pred = update_thresholds(y_train_pred, thresholds)
     y_val_pred = update_thresholds(y_val_pred, thresholds)
-
     get_metrics(y_train=y_train, y_train_pred=y_train_pred,
-                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name, conf_train=conf_train, conf_val=conf_val)
+                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name,
+                conf_train=conf_train, conf_val=conf_val,
+                conf_test=conf_test, model_type=model_type)
 
     return booster, thresholds
 
 
-def train_linear_regression(x_train, y_train, x_val, y_val, outcome_name='rating', conf_train=False, conf_val=False):
+def train_linear_regression(x_train, y_train, x_val=None, y_val=None,
+                            outcome_name='rating', conf_train=False,
+                            conf_val=False, conf_test=False,
+                            model_type="Linear Regression"):
 
     reg = LinearRegression()
     reg.fit(x_train, y_train[outcome_name])
@@ -502,12 +528,17 @@ def train_linear_regression(x_train, y_train, x_val, y_val, outcome_name='rating
     y_train_pred = update_thresholds(y_train_pred, thresholds)
     y_val_pred = update_thresholds(y_val_pred, thresholds)
     get_metrics(y_train=y_train, y_train_pred=y_train_pred,
-                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name, conf_train=conf_train, conf_val=conf_val)
+                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name,
+                conf_train=conf_train, conf_val=conf_val,
+                conf_test=conf_test, model_type=model_type)
 
     return reg, thresholds
 
 
-def train_ridge_regression(x_train, y_train, x_val, y_val, outcome_name='rating'):
+def train_ridge_regression(x_train, y_train, x_val=None, y_val=None,
+                           outcome_name='rating', conf_train=False,
+                           conf_val=False, conf_test=False,
+                           model_type="Linear Regression"):
 
     l2 = Ridge()
 
@@ -533,7 +564,9 @@ def train_ridge_regression(x_train, y_train, x_val, y_val, outcome_name='rating'
     y_train_pred = update_thresholds(y_train_pred, thresholds)
     y_val_pred = update_thresholds(y_val_pred, thresholds)
     get_metrics(y_train=y_train, y_train_pred=y_train_pred,
-                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name)
+                y_val=y_val, y_val_pred=y_val_pred, outcome_name=outcome_name,
+                conf_train=conf_train, conf_val=conf_val,
+                conf_test=conf_test, model_type=model_type)
 
     return l2, thresholds
 
@@ -557,12 +590,14 @@ def main(outcome_name='rating'):
     print("*******************************\n ** LINEAR REGRESSION ** \n*******************************")
 
     reg, thresholds = train_linear_regression(
-        x_train, y_train, x_val, y_val, outcome_name)
+        x_train, y_train, x_val, y_val, outcome_name,
+        model_type="Linear Regression")
 
     y_test_pred = reg.predict(x_test)
     y_test_pred = update_thresholds(y_test_pred, thresholds)
     get_metrics(y_test=y_test, y_test_pred=y_test_pred,
-                outcome_name=outcome_name, conf_test=True)
+                outcome_name=outcome_name, conf_test=True,
+                model_type="Linear Regression")
 
     """
     ***** L2 Regularization *****
@@ -571,12 +606,14 @@ def main(outcome_name='rating'):
     print("*******************************\n ** L2 REGULARIZATION ** \n*******************************")
 
     l2reg, thresholds = train_ridge_regression(
-        x_train, y_train, x_val, y_val, outcome_name)
+        x_train, y_train, x_val, y_val, outcome_name,
+        model_type="Ridge Regression")
 
     y_test_pred = l2reg.predict(x_test)
     y_test_pred = update_thresholds(y_test_pred, thresholds)
     get_metrics(y_test=y_test, y_test_pred=y_test_pred,
-                outcome_name=outcome_name, conf_test=True)
+                outcome_name=outcome_name, conf_test=True,
+                model_type="Ridge Regression")
 
     """
     ***** Gradient Boosting Regressor *****
@@ -585,12 +622,14 @@ def main(outcome_name='rating'):
     print("*******************************\n ** GRADIENT BOOSTING REGRESSOR ** \n*******************************")
 
     booster, thresholds = train_gradient_boosting_regressor(
-        x_train, y_train, x_val, y_val, outcome_name=outcome_name)
+        x_train, y_train, x_val, y_val, outcome_name=outcome_name,
+        model_type="Gradient Boosting Regressor")
 
     y_test_pred = booster.predict(x_test)
     y_test_pred = update_thresholds(y_test_pred, thresholds)
     get_metrics(y_test=y_test, y_test_pred=y_test_pred,
-                outcome_name=outcome_name, conf_test=True)
+                outcome_name=outcome_name, conf_test=True,
+                model_type="Gradient Boosting Regressor")
 
     """
     ***** Decision Tree model *****
@@ -599,14 +638,16 @@ def main(outcome_name='rating'):
     print("*******************************\n ** DECISION TREE REGRESSOR ** \n*******************************")
 
     tree_reg, thresholds = train_decision_tree_regressor(
-        x_train, y_train, x_val, y_val, outcome_name=outcome_name)
+        x_train, y_train, x_val, y_val,
+        outcome_name=outcome_name, model_type="Decision Tree Regressor")
 
     # Only run once we've maximized validation accuracy!
     y_test_pred = tree_reg.predict(x_test)
     y_test_pred = update_thresholds(y_test_pred, thresholds)
 
     get_metrics(y_test=y_test, y_test_pred=y_test_pred,
-                outcome_name=outcome_name, conf_test=True)
+                outcome_name=outcome_name, conf_test=True,
+                model_type="Decision Tree Regressor")
 
     """
     ***** Random Forest Model *****
@@ -615,14 +656,16 @@ def main(outcome_name='rating'):
     print("*******************************\n ** RANDOM FOREST REGRESSOR ** \n*******************************")
 
     forest_reg, thresholds = train_random_forest_regressor(
-        x_train, y_train, x_val, y_val, outcome_name=outcome_name)
+        x_train, y_train, x_val, y_val,
+        outcome_name=outcome_name, model_type="Random Forest Regressor")
 
     # Only run once we've maximized validation accuracy!
     y_test_pred = forest_reg.predict(x_test)
     y_test_pred = update_thresholds(y_test_pred, thresholds)
 
     get_metrics(y_test=y_test, y_test_pred=y_test_pred,
-                outcome_name=outcome_name, conf_test=True)
+                outcome_name=outcome_name, conf_test=True,
+                model_type="Random Forest Regressor")
 
     """
     ***** One versus Rest model *****
@@ -631,13 +674,15 @@ def main(outcome_name='rating'):
     print("*******************************\n ** ONE VERSUS REST ** \n*******************************")
 
     ovr = train_one_versus_rest(
-        x_train, y_train, x_val, y_val, outcome_name=outcome_name)
+        x_train, y_train, x_val, y_val,
+        outcome_name=outcome_name, model_type="OvR")
 
     # Only run once we've maximized validation accuracy!
     y_test_pred = ovr.predict(x_test)
     y_test_pred = update_thresholds(y_test_pred, [0.8, 1.35])
     get_metrics(y_test=y_test, y_test_pred=y_test_pred,
-                outcome_name=outcome_name, conf_test=True)
+                outcome_name=outcome_name, conf_test=True,
+                model_type="OvR")
 
     """
     ***** Fixed Effects model *****
@@ -648,13 +693,15 @@ def main(outcome_name='rating'):
     df, (x_train, x_val, x_test, y_train, y_val, y_test) = get_panel_data()
     x_train, x_val, x_test = standardize_data(x_train, x_val, x_test)
     fe_params, thresholds = train_fixed_effects(
-        x_train, y_train, x_val, y_val, outcome_name=outcome_name)
+        x_train, y_train, x_val, y_val,
+        outcome_name=outcome_name, model_type="Fixed Effects")
 
     # Only run once we've maximized validation accuracy!
     y_test_pred = x_test @ fe_params
     y_test_pred = update_thresholds(y_test_pred, thresholds)
     get_metrics(y_test=y_test, y_test_pred=y_test_pred,
-                outcome_name=outcome_name, conf_test=True)
+                outcome_name=outcome_name, conf_test=True,
+                model_type="Fixed Effects")
 
 
 if __name__ == '__main__':
