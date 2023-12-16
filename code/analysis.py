@@ -1,10 +1,10 @@
-import itertools
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import KNNImputer
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, multilabel_confusion_matrix, ConfusionMatrixDisplay
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -101,46 +101,121 @@ def get_model_inputs(df, simple=False):
     return x_train, x_val, x_test, y_train, y_val, y_test
 
 
-def plot_confusion_matrix(cm,
-                          target_names,
-                          title='Confusion matrix',
-                          cmap=None,
-                          normalize=True):
+"""
+All credit goes to Dennis Trimarchi for this confusion matrix function.
+You can find the Github repository here: https://github.com/DTrimarchi10/confusion_matrix/tree/master
+"""
 
-    accuracy = np.trace(cm) / float(np.sum(cm))
-    misclass = 1 - accuracy
 
-    if cmap is None:
-        cmap = plt.get_cmap('Blues')
+def make_confusion_matrix(cf,
+                          group_names=None,
+                          categories='auto',
+                          count=True,
+                          percent=True,
+                          cbar=True,
+                          xyticks=True,
+                          xyplotlabels=True,
+                          sum_stats=True,
+                          figsize=None,
+                          cmap='Blues',
+                          title=None):
+    '''
+    This function will make a pretty plot of an sklearn Confusion Matrix cm using a Seaborn heatmap visualization.
 
-    plt.figure(figsize=(8, 6))
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
+    Arguments
+    ---------
+    cf:            confusion matrix to be passed in
 
-    if target_names is not None:
-        tick_marks = np.arange(len(target_names))
-        plt.xticks(tick_marks, target_names, rotation=45)
-        plt.yticks(tick_marks, target_names)
+    group_names:   List of strings that represent the labels row by row to be shown in each square.
 
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    categories:    List of strings containing the categories to be displayed on the x,y axis. Default is 'auto'
 
-    thresh = cm.max() / 1.5 if normalize else cm.max() / 2
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        if normalize:
-            plt.text(j, i, "{:0.4f}".format(cm[i, j]),
-                     horizontalalignment="center",
-                     color="white" if cm[i, j] > thresh else "black")
+    count:         If True, show the raw number in the confusion matrix. Default is True.
+
+    normalize:     If True, show the proportions for each category. Default is True.
+
+    cbar:          If True, show the color bar. The cbar values are based off the values in the confusion matrix.
+                   Default is True.
+
+    xyticks:       If True, show x and y ticks. Default is True.
+
+    xyplotlabels:  If True, show 'True Label' and 'Predicted Label' on the figure. Default is True.
+
+    sum_stats:     If True, display summary statistics below the figure. Default is True.
+
+    figsize:       Tuple representing the figure size. Default will be the matplotlib rcParams value.
+
+    cmap:          Colormap of the values displayed from matplotlib.pyplot.cm. Default is 'Blues'
+                   See http://matplotlib.org/examples/color/colormaps_reference.html
+
+    title:         Title for the heatmap. Default is None.
+
+    '''
+
+    # CODE TO GENERATE TEXT INSIDE EACH SQUARE
+    blanks = ['' for i in range(cf.size)]
+
+    if group_names and len(group_names) == cf.size:
+        group_labels = ["{}\n".format(value) for value in group_names]
+    else:
+        group_labels = blanks
+
+    if count:
+        group_counts = ["{0:0.0f}\n".format(value) for value in cf.flatten()]
+    else:
+        group_counts = blanks
+
+    if percent:
+        group_percentages = ["{0:.2%}".format(
+            value) for value in cf.flatten()/np.sum(cf)]
+    else:
+        group_percentages = blanks
+
+    box_labels = [f"{v1}{v2}{v3}".strip() for v1, v2, v3 in zip(
+        group_labels, group_counts, group_percentages)]
+    box_labels = np.asarray(box_labels).reshape(cf.shape[0], cf.shape[1])
+
+    # CODE TO GENERATE SUMMARY STATISTICS & TEXT FOR SUMMARY STATS
+    if sum_stats:
+        # Accuracy is sum of diagonal divided by total observations
+        accuracy = np.trace(cf) / float(np.sum(cf))
+
+        # if it is a binary confusion matrix, show some more stats
+        if len(cf) == 2:
+            # Metrics for Binary Confusion Matrices
+            precision = cf[1, 1] / sum(cf[:, 1])
+            recall = cf[1, 1] / sum(cf[1, :])
+            f1_score = 2*precision*recall / (precision + recall)
+            stats_text = "\n\nAccuracy={:0.3f}\nPrecision={:0.3f}\nRecall={:0.3f}\nF1 Score={:0.3f}".format(
+                accuracy, precision, recall, f1_score)
         else:
-            plt.text(j, i, "{:,}".format(cm[i, j]),
-                     horizontalalignment="center",
-                     color="white" if cm[i, j] > thresh else "black")
+            stats_text = "\n\nAccuracy={:0.3f}".format(accuracy)
+    else:
+        stats_text = ""
 
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label\naccuracy={:0.4f}; misclass={:0.4f}'.format(
-        accuracy, misclass))
+    # SET FIGURE PARAMETERS ACCORDING TO OTHER ARGUMENTS
+    if figsize == None:
+        # Get default figure size if not set
+        figsize = plt.rcParams.get('figure.figsize')
+
+    if xyticks == False:
+        # Do not show categories if xyticks is False
+        categories = False
+
+    # MAKE THE HEATMAP VISUALIZATION
+    plt.figure(figsize=figsize)
+    sns.heatmap(cf, annot=box_labels, fmt="", cmap=cmap, cbar=cbar,
+                xticklabels=categories, yticklabels=categories)
+
+    if xyplotlabels:
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label' + stats_text)
+    else:
+        plt.xlabel(stats_text)
+
+    if title:
+        plt.title(title)
+
     plt.show()
 
 
@@ -176,10 +251,11 @@ def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None,
 
         if conf_train:
 
-            cm_train = confusion_matrix(y_train_pred, y_train[outcome_name])
+            cm_train = confusion_matrix(
+                y_true=y_train[outcome_name], y_pred=y_train_pred, labels=[0, 1, 2])
 
-            plot_confusion_matrix(cm_train, [0, 1, 2],
-                                  f'{model_type} (Training) Predictions', normalize=False)
+            make_confusion_matrix(cm_train, group_names=[
+                                  '0', '1', '2'], title=f'{model_type} (Testing) Predictions', percent=False)
 
         train_accuracy = accuracy_score(y_train[outcome_name], y_train_pred)
         train_precision = precision_score(
@@ -199,9 +275,10 @@ def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None,
 
         if conf_val:
 
-            cm_val = confusion_matrix(y_val_pred, y_val[outcome_name])
-            plot_confusion_matrix(cm_val, [0, 1, 2],
-                                  f'{model_type} (Validation) Predictions', normalize=False)
+            cm_val = confusion_matrix(
+                y_true=y_val[outcome_name], y_pred=y_val_pred, labels=[0, 1, 2])
+            make_confusion_matrix(cm_val, group_names=[
+                                  '0', '1', '2'], title=f'{model_type} (Testing) Predictions', percent=False)
 
         val_accuracy = accuracy_score(y_val[outcome_name], y_val_pred)
         val_precision = precision_score(
@@ -220,9 +297,10 @@ def get_metrics(y_train=None, y_train_pred=None, y_val=None, y_val_pred=None,
 
         if conf_test:
 
-            cm_val = confusion_matrix(y_test_pred, y_test[outcome_name])
-            plot_confusion_matrix(cm_val, [0, 1, 2],
-                                  f'{model_type} (Testing) Predictions', normalize=False)
+            cm_test = confusion_matrix(
+                y_true=y_test[outcome_name], y_pred=y_test_pred, labels=[0, 1, 2])
+            make_confusion_matrix(cm_test, group_names=[
+                                  '0', '1', '2'], title=f'{model_type} (Testing) Predictions', percent=False)
 
         test_accuracy = accuracy_score(y_test[outcome_name], y_test_pred)
         test_precision = precision_score(
@@ -595,6 +673,7 @@ def main(outcome_name='rating'):
 
     y_test_pred = reg.predict(x_test)
     y_test_pred = update_thresholds(y_test_pred, thresholds)
+
     get_metrics(y_test=y_test, y_test_pred=y_test_pred,
                 outcome_name=outcome_name, conf_test=True,
                 model_type="Linear Regression")
